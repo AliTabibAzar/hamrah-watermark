@@ -1,0 +1,11 @@
+# Heavy AI dependencies — server only, never locally.
+# Usage: pip install -r requirements-base.txt -r requirements-ai.txt
+-r requirements-base.txt
+torch>=2.2 --index-url https://download.pytorch.org/whl/cu121
+torchvision>=0.17 --index-url https://download.pytorch.org/whl/cu121
+diffusers>=0.27
+transformers>=4.38
+accelerate>=0.28
+huggingface_hub>=0.20
+onnxruntime-gpu>=1.17; sys_platform != "darwin"
+scikit-image>=0.22

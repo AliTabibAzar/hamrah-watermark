@@ -1,0 +1,8 @@
+# Base dependencies — lightweight, no torch.
+# Installable anywhere. Main target: Python 3.11 on the server.
+streamlit>=1.32
+opencv-python>=4.9
+pillow>=10.2
+numpy>=1.26
+pyyaml>=6.0
+pytest>=8.0

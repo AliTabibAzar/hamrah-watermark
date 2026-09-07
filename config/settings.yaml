@@ -1,0 +1,44 @@
+# Main configuration for Smart Watermark Studio.
+# Every tunable number lives here, not in code.
+
+app:
+  title: "Smart Watermark Studio"
+  max_upload_mb: 15
+  supported_formats: ["jpg", "jpeg", "png", "webp"]
+
+validation:
+  min_width: 128
+  min_height: 128
+  max_width: 6000
+  max_height: 6000
+
+preprocessing:
+  model_size: 512  # detection input size; masks are mapped back afterwards
+  keep_original_size: true
+
+detection:
+  # modes: auto (U-Net) / heuristic (corners) / manual (user box)
+  default_mode: "heuristic"
+  unet_threshold: 0.5
+  unet_weights: "models/watermark-unet.pt"
+  min_mask_area_ratio: 0.0005  # smaller regions count as noise
+  max_mask_area_ratio: 0.45    # above this, warn about quality limits
+
+mask_refinement:
+  threshold: 127
+  open_kernel: 3
+  close_kernel: 5
+  min_object_px: 200
+
+inpainting:
+  # auto tries lama weights first, then falls back to telea
+  default_backend: "auto"  # auto | lama | telea | sd
+  lama_model_path: "models/big-lama.pt"
+  sd_model_id: "runwayml/stable-diffusion-inpainting"
+  telea_radius: 3
+
+device:
+  name: "auto"  # cuda first, then cpu
+
+logging:
+  level: "INFO"

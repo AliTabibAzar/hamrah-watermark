@@ -17,12 +17,19 @@ preprocessing:
   keep_original_size: true
 
 detection:
-  # modes: auto (U-Net) / heuristic (corners) / manual (user box)
+  # modes: auto (U-Net) / heuristic (corners) / manual (user box) / vlm (Florence-2 agent)
   default_mode: "heuristic"
   unet_threshold: 0.5
   unet_weights: "models/watermark-unet.pt"
   min_mask_area_ratio: 0.0005  # smaller regions count as noise
   max_mask_area_ratio: 0.45    # above this, warn about quality limits
+  vlm_model_id: "microsoft/Florence-2-base"
+  vlm_prompts:  # English prompts — the model grounds English best
+    - "watermark"
+    - "logo"
+    - "semi-transparent text overlay"
+    - "copyright text"
+  vlm_max_refine_rounds: 2
 
 mask_refinement:
   threshold: 127

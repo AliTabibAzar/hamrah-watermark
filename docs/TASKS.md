@@ -106,7 +106,11 @@ locally without torch, falling back gracefully. No model downloads locally.
 
 ## Backlog (after Friday, only if time)
 
-- [ ] Real U-Net weights + `unet_mask` wiring (needs server)
+- [x] U-Net training package (code only, no weights): `train_unet.py`,
+      `src/models/unet.py`, `src/data/watermark_data.py`,
+      `scripts/gen_synthetic.py`, `scripts/download_data.py`,
+      `kaggle_train.ipynb`, `requirements-train.txt` — smoke-tested on CPU,
+      real training runs on Kaggle T4, weights go to `models/` (gitignored)
 - [ ] LaMa inference wiring (needs server + weights)
 - [ ] Stable Diffusion inpainting option for large masks
 - [ ] Before/after slider, brush mask editor, batch mode

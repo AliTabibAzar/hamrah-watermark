@@ -1,0 +1,9 @@
+# Training-only dependencies. The app itself needs only requirements-base/ai.
+# Kaggle notebooks already ship torch/torchvision/Pillow/numpy — this file
+# pins what train_unet.py additionally expects.
+torch>=2.2
+torchvision>=0.17
+pillow>=10.2
+numpy>=1.26
+tqdm>=4.66
+huggingface_hub>=0.20  # dataset downloads (PITA etc.)

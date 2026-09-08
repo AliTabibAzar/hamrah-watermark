@@ -110,13 +110,22 @@ def main():
         _inspect(args.src, work)
         return
 
-    total, from_mask, from_yolo, skipped = 0, 0, 0, 0
+    total, from_mask, from_yolo, skipped, negatives = 0, 0, 0, 0, 0
     # group plain + yolo variants per split, prefer plain (real masks win)
     groups: dict[str, list] = {}
     for name, root in _unzip_all(args.src, work):
         groups.setdefault(name.replace("-yolo", ""), []).append((name, root))
     splits = [(base, sorted(v, key=lambda t: ("yolo" in t[0]))[0][1])
               for base, v in sorted(groups.items())]
+    # global fallback index: plain splits carry images WITHOUT labels while
+    # the matching labels live in the sibling yolo split (same COCO stems).
+    # index ALL unzipped roots, not just the preferred split variant
+    all_roots = [r for _, r in _unzip_all(args.src, work)]
+    global_masks: dict[str, str] = {}
+    global_yolos: dict[str, str] = {}
+    for r in all_roots:
+        global_masks.update(_find_masks(r))
+        global_yolos.update(_find_yolo(r))
     for split, root in splits:
         images = _find_images(root)
         masks = _find_masks(root)
@@ -136,9 +145,17 @@ def main():
                     from_mask += 1
                 except OSError:
                     mask = None
-            if mask is None and key in yolos:
-                mask = _rasterize_yolo(yolos[key], w, h)
-                from_yolo += 1
+            if mask is None:
+                yolo_path = yolos.get(key) or global_yolos.get(key)
+                if yolo_path is None and key in global_masks:
+                    try:
+                        mask = Image.open(global_masks[key]).convert("L").resize((w, h))
+                        from_mask += 1
+                    except OSError:
+                        mask = None
+                elif yolo_path is not None:
+                    mask = _rasterize_yolo(yolo_path, w, h)
+                    from_yolo += 1
             if mask is None:
                 skipped += 1
                 continue
@@ -148,7 +165,6 @@ def main():
     print(f"pairs={total} from_mask={from_mask} from_yolo={from_yolo} skipped={skipped} -> {args.dst}")
     if total == 0:
         raise SystemExit(f"ERROR: no usable pairs under {args.src}")
-
 
 if __name__ == "__main__":
     main()

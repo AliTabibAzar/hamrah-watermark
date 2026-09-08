@@ -24,8 +24,7 @@ from PIL import Image, ImageDraw
 IMG_EXTS = (".jpg", ".jpeg", ".png", ".webp")
 
 
-def _unzip_all(src: str, work: str) -> list[str]:
-    zips = sorted(glob.glob(os.path.join(src, "**", "*.zip"), recursive=True))
+def _unzip_all(src: str, work: str) -> list[str]:    zips = sorted(glob.glob(os.path.join(src, "**", "*.zip"), recursive=True))
     out_dirs = []
     for z in zips:
         name = os.path.splitext(os.path.basename(z))[0]  # train / val / test-yolo ...
@@ -79,10 +78,25 @@ def _rasterize_yolo(txt_path: str, w: int, h: int) -> Image.Image:
     return mask
 
 
+def _inspect(src: str, work: str):
+    """Dumps the unzipped layout: dir tree + sample filenames per folder."""
+    for name, root in _unzip_all(src, work):
+        print(f"== split: {name} ==")
+        for dirpath, _, files in os.walk(root):
+            rel = os.path.relpath(dirpath, root)
+            if rel.count(os.sep) > 2:
+                continue
+            sample = ", ".join(sorted(files)[:4])
+            print(f"  [{rel}] {len(files)} files e.g. {sample}")
+    print("inspect done — paste this output to the developer")
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--src", required=True, help="snapshot dir (with data/*.zip)")
     ap.add_argument("--dst", required=True, help="output dataset root")
+    ap.add_argument("--inspect", action="store_true",
+                    help="only dump the unzipped layout, convert nothing")
     args = ap.parse_args()
 
     img_dir = os.path.join(args.dst, "images")
@@ -91,6 +105,9 @@ def main():
     os.makedirs(mask_dir, exist_ok=True)
     work = os.path.join(args.dst, "_unzipped")
     os.makedirs(work, exist_ok=True)
+    if args.inspect:
+        _inspect(args.src, work)
+        return
 
     total, from_mask, from_yolo, skipped = 0, 0, 0, 0
     # group plain + yolo variants per split, prefer plain (real masks win)

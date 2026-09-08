@@ -24,7 +24,8 @@ from PIL import Image, ImageDraw
 IMG_EXTS = (".jpg", ".jpeg", ".png", ".webp")
 
 
-def _unzip_all(src: str, work: str) -> list[str]:    zips = sorted(glob.glob(os.path.join(src, "**", "*.zip"), recursive=True))
+def _unzip_all(src: str, work: str) -> list[str]:
+    zips = sorted(glob.glob(os.path.join(src, "**", "*.zip"), recursive=True))
     out_dirs = []
     for z in zips:
         name = os.path.splitext(os.path.basename(z))[0]  # train / val / test-yolo ...

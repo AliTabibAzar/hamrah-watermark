@@ -42,28 +42,32 @@ locally without torch, falling back gracefully. No model downloads locally.
 - [x] Folder structure on `main`, `feat/detection`, `feat/removal`
 - [x] README with pipeline overview
 - [x] This task list
-- [ ] `config/settings.yaml` — all thresholds, sizes, model paths
-- [ ] `requirements-base.txt` — streamlit, opencv, pillow, numpy, pyyaml, pytest
+- [x] `config/settings.yaml` — all thresholds, sizes, model paths
+- [ ] `requirements-base.txt` — streamlit, opencv, pillow, numpy, pyyaml, pytest (+ rapidocr-onnxruntime)
 - [ ] `requirements-ai.txt` — torch, diffusers, transformers (server only)
-- [ ] `src/utils` — logger, config loader, image helpers
-- [ ] `src/models/model_manager.py` — lazy loading, device auto-pick, weight checks
+- [x] `src/utils` — logger, config loader, image helpers
+- [x] `src/models/model_manager.py` — lazy loading, device auto-pick, weight checks
 
 ## Detection track (Ali, Sun → Tue)
 
-- [ ] `src/validation/image_validator.py` — format, size, corruption checks
+- [x] `src/validation/image_validator.py` — format, size, corruption checks
       with UI-ready messages; never crashes on bad input
-- [ ] `src/preprocessing/preprocessing.py` — RGB convert, resize to model
+- [x] `src/preprocessing/preprocessing.py` — RGB convert, resize to model
       size, map mask back to original resolution
-- [ ] `src/detection/detector.py` — corner/text heuristic first, U-Net stub
+- [x] `src/detection/detector.py` — multi-cue (OCR-led + whiteness + top-hat
+      + MSER + edge tiles); 3/6 samples passing, rest partial; U-Net stub kept
       (`unet_mask` raises until server weights exist)
-- [ ] `src/detection/localization.py` — mask to bounding boxes for the UI
-- [ ] `src/segmentation/mask_generator.py` — detect + refine in one call
-- [ ] `src/mask/mask_refinement.py` — threshold, open/close, speck removal,
-      all values from settings
+- [x] `src/detection/localization.py` — mask to bounding boxes for the UI
+- [x] `src/segmentation/mask_generator.py` — detect + refine in one call
+- [x] `src/mask/mask_refinement.py` — threshold, open/close, speck + giant
+      removal, dilation; all values from settings
+- [x] `scripts/eval_detector.py` + `scripts/gt_watermarks.json` — IoU/recall
+      harness on the 6 local samples (`python scripts/eval_detector.py`)
 - [ ] Manual mask box input in the UI (brush editor if time allows)
 - [ ] `data/test/*` — sample images per category (corner, text,
       transparent, colored, busy, difficult)
-- [ ] Tests: validator, preprocessing roundtrip, mask refinement, metrics
+- [x] Tests: validator, preprocessing roundtrip, mask refinement, detector
+      (metrics tests belong to the removal track)
 
 ## Removal track (Hossein, Mon → Wed)
 

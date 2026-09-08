@@ -17,6 +17,7 @@ def generate_mask(
         open_k=cfg.get("open_kernel", 3),
         close_k=cfg.get("close_kernel", 5),
         min_object_px=cfg.get("min_object_px", 200),
+        dilate_iter=cfg.get("dilate_iter", 0),
     )
     if (clean > 0).sum() == 0:
         return clean, msg + " (Mask is empty — draw it manually.)"

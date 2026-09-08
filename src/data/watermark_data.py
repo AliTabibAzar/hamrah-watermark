@@ -13,6 +13,21 @@ import torch
 from PIL import Image
 from torch.utils.data import ConcatDataset, DataLoader, Dataset, random_split
 
+try:
+    import albumentations as A
+
+    _AUG = A.Compose([
+        A.HorizontalFlip(p=0.5),
+        A.ShiftScaleRotate(shift_limit=0.05, scale_limit=0.15,
+                           rotate_limit=15, border_mode=0, p=0.7),
+        A.RandomBrightnessContrast(brightness_limit=0.2,
+                                   contrast_limit=0.2, p=0.5),
+        A.GaussNoise(std_range=(5.0, 20.0), p=0.3),
+        A.ImageCompression(quality_range=(60, 100), p=0.3),
+    ])
+except ImportError:
+    _AUG = None  # graceful fallback to plain hflip below
+
 
 class MaskDataset(Dataset):
     def __init__(self, root: str, size: int = 256, augment: bool = False):
@@ -40,10 +55,17 @@ class MaskDataset(Dataset):
             raise FileNotFoundError(f"No mask for {name} in {self.mask_dir}")
         img = img.resize((self.size, self.size), Image.BILINEAR)
         mask = mask.resize((self.size, self.size), Image.NEAREST)
-        x = np.asarray(img, dtype=np.float32).transpose(2, 0, 1) / 255.0
-        y = (np.asarray(mask, dtype=np.float32) > 127).astype(np.float32)[None]
-        if self.augment and np.random.rand() < 0.5:
-            x, y = x[:, :, ::-1].copy(), y[:, :, ::-1].copy()  # hflip
+        img_np = np.asarray(img)
+        mask_np = np.asarray(mask)
+        if self.augment:
+            if _AUG is not None:
+                aug = _AUG(image=img_np, mask=mask_np)
+                img_np, mask_np = aug["image"], aug["mask"]
+            elif np.random.rand() < 0.5:
+                img_np = img_np[:, ::-1].copy()
+                mask_np = mask_np[:, ::-1].copy()
+        x = img_np.astype(np.float32).transpose(2, 0, 1) / 255.0
+        y = (mask_np.astype(np.float32) > 127).astype(np.float32)[None]
         mean = np.array([0.485, 0.456, 0.406], dtype=np.float32)[:, None, None]
         std = np.array([0.229, 0.224, 0.225], dtype=np.float32)[:, None, None]
         return torch.from_numpy((x - mean) / std), torch.from_numpy(y)

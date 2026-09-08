@@ -6,4 +6,5 @@ torchvision>=0.17
 pillow>=10.2
 numpy>=1.26
 tqdm>=4.66
+albumentations>=1.4  # strong aug; code falls back to hflip without it
 huggingface_hub>=0.20  # dataset downloads (PITA etc.)

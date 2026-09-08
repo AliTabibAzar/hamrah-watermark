@@ -2,9 +2,10 @@
 
 Usage:
     python train_unet.py --data data/clwd data/logo --out models --epochs 40
+    python train_unet.py --data data/pita --out models --resume  # continue
 
-Checkpoints (best + every 5 epochs) go to --out. Early stopping on val loss.
-Mixed precision on CUDA, plain fp32 on CPU.
+Checkpoints (best + every 5 epochs) go to --out. Best = highest val IoU
+(loss lies when masks are noisy). Mixed precision on CUDA, fp32 on CPU.
 """
 
 import argparse
@@ -39,12 +40,24 @@ def train(args):
     print(f"train_batches={len(train_dl)} val_batches={len(val_dl)}")
     model = WatermarkUNet(pretrained_encoder=not args.no_pretrained).to(device)
     opt = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=1e-4)
-    sched = torch.optim.lr_scheduler.ReduceLROnPlateau(opt, patience=3, factor=0.5)
+    if args.scheduler == "cosine":
+        sched = torch.optim.lr_scheduler.CosineAnnealingLR(opt, T_max=args.epochs)
+        plateau = False
+    else:
+        sched = torch.optim.lr_scheduler.ReduceLROnPlateau(opt, patience=3, factor=0.5)
+        plateau = True
     scaler = torch.amp.GradScaler("cuda") if device == "cuda" else None
     os.makedirs(args.out, exist_ok=True)
 
-    best, bad = float("inf"), 0
-    for epoch in range(1, args.epochs + 1):
+    start_epoch, best_iou, bad = 1, 0.0, 0
+    best_path = os.path.join(args.out, "watermark-unet.pt")
+    if args.resume and os.path.exists(best_path):
+        try:
+            model.load_state_dict(torch.load(best_path, map_location=device))
+            print(f"resumed from {best_path} (weights only, fresh optimizer)")
+        except Exception as e:  # noqa: BLE001 — corrupt file must not kill the run
+            print(f"resume failed ({e}), starting fresh")
+    for epoch in range(start_epoch, args.epochs + 1):
         model.train()
         tr_loss = 0.0
         for x, y in train_dl:
@@ -74,21 +87,24 @@ def train(args):
                 n += 1
         va_loss /= max(n, 1)
         va_iou /= max(n, 1)
-        sched.step(va_loss)
+        if plateau:
+            sched.step(va_loss)
+        else:
+            sched.step()
         print(f"epoch {epoch}/{args.epochs} train={tr_loss:.4f} val={va_loss:.4f} iou={va_iou:.4f}", flush=True)
 
         if epoch % 5 == 0:
             atomic_save(model.state_dict(), os.path.join(args.out, f"unet_e{epoch}.pt"))
-        if va_loss < best:
-            best, bad = va_loss, 0
-            atomic_save(model.state_dict(), os.path.join(args.out, "watermark-unet.pt"))
-            print(f"  -> new best, saved watermark-unet.pt")
+        if va_iou > best_iou + 1e-4:
+            best_iou, bad = va_iou, 0
+            atomic_save(model.state_dict(), best_path)
+            print(f"  -> new best (iou={va_iou:.4f}), saved watermark-unet.pt")
         else:
             bad += 1
             if bad >= args.patience:
-                print(f"early stop at epoch {epoch}")
+                print(f"early stop at epoch {epoch} (best iou={best_iou:.4f})")
                 break
-    print(f"done. best val loss={best:.4f} -> {os.path.join(args.out, 'watermark-unet.pt')}")
+    print(f"done. best val iou={best_iou:.4f} -> {best_path}")
 
 
 if __name__ == "__main__":
@@ -102,4 +118,7 @@ if __name__ == "__main__":
     ap.add_argument("--workers", type=int, default=2)
     ap.add_argument("--patience", type=int, default=8)
     ap.add_argument("--no-pretrained", action="store_true")
+    ap.add_argument("--resume", action="store_true",
+                    help="continue from --out/watermark-unet.pt if present")
+    ap.add_argument("--scheduler", default="plateau", choices=["plateau", "cosine"])
     train(ap.parse_args())

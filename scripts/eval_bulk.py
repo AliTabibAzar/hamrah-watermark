@@ -65,15 +65,19 @@ def predict(mode, img, unet_cache, threshold):
     if mode == "ensemble":
         from src.detection.detector import cue_ocr, cue_tophat, cue_whiteness
         from src.mask.mask_refinement import refine_mask
-        from src.models.unet_infer import predict_proba
         h, w = img.shape[:2]
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        prob = predict_proba(img, model=unet_cache.get("model"),
-                             device=unet_cache.get("device", "cpu"))
-        votes = ((prob > threshold).astype(np.uint8)
-                 + (cue_ocr(img)[0] > 0).astype(np.uint8) * 2
+        votes = ((cue_ocr(img)[0] > 0).astype(np.uint8) * 2
                  + (cue_whiteness(img) > 0).astype(np.uint8)
                  + (cue_tophat(gray) > 0).astype(np.uint8))
+        if unet_cache.get("model") is not None:
+            from src.models.unet_infer import predict_proba
+            prob = predict_proba(img, model=unet_cache.get("model"),
+                                 device=unet_cache.get("device", "cpu"))
+            votes = votes + (prob > threshold).astype(np.uint8)
+        else:
+            # broken/retired weights stay out instead of poisoning the vote
+            print("  (ensemble without U-Net: weights missing or unloadable)")
         raw = (votes >= 2).astype(np.uint8) * 255
         return refine_mask(raw, dilate_iter=1)
     raise ValueError(f"unknown mode {mode}")
@@ -100,13 +104,18 @@ def main():
 
     unet_cache: dict = {}
     if args.mode in ("unet", "ensemble"):
-        import torch
+        try:
+            import torch
 
-        from src.models.unet_infer import load_unet_weights
-        dev = "cuda" if torch.cuda.is_available() else "cpu"
-        model, dev = load_unet_weights(args.weights, dev)
-        unet_cache = {"model": model, "device": dev}
-        print(f"unet on {dev}")
+            from src.models.unet_infer import load_unet_weights
+            dev = "cuda" if torch.cuda.is_available() else "cpu"
+            model, dev = load_unet_weights(args.weights, dev)
+            unet_cache = {"model": model, "device": dev}
+            print(f"unet on {dev}")
+        except Exception as e:  # noqa: BLE001 — missing torch/weights is normal
+            if args.mode == "unet":
+                raise SystemExit(f"ERROR: unet mode needs weights+torch: {e}")
+            print(f"ensemble continues without U-Net ({e})")
 
     for thr in args.thresholds:
         print(f"\n=== threshold={thr} ===")

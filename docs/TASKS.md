@@ -92,6 +92,11 @@ locally without torch, falling back gracefully. No model downloads locally.
 
 ## Evaluation + docs (both, Thursday buffer)
 
+- [ ] Eval gate 1K (600 CLWD-test + 400 LOGO-test) with `eval_bulk.py`;
+      bars: CLWD IoU>=0.45+recall>=0.70, LOGO IoU>=0.40; full run (or
+      stratified 3K if >4h) only after GATE PASS
+- [ ] PITA excluded from scoring everywhere (labels unreliable) —
+      the 6 local samples are qualitative demo only, never a metric
 - [ ] `scripts/benchmark.py` — timing per stage (detection, mask,
       inpaint, watermark, total)
 - [ ] Honest limitations section in README (large masks, tiny

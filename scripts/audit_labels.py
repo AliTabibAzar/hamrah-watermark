@@ -68,6 +68,18 @@ def overlay(img, boxes_list):
     return vis
 
 
+SPLIT_PREFIXES = ("train__", "val__", "test__")
+
+
+def norm_stem(filename: str) -> str:
+    """Strips converter split prefixes so converted images match raw labels."""
+    stem = os.path.splitext(os.path.basename(filename))[0]
+    for pre in SPLIT_PREFIXES:
+        if stem.startswith(pre):
+            return stem[len(pre):]
+    return stem
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--labels", required=True, help="tree with *.txt label files")
@@ -81,14 +93,14 @@ def main():
     imgs = {}
     for p in glob.glob(os.path.join(args.images, "**", "*"), recursive=True):
         if p.lower().endswith((".jpg", ".jpeg", ".png", ".webp")):
-            imgs[os.path.splitext(os.path.basename(p))[0]] = p
+            imgs[norm_stem(p)] = p
     rng = random.Random(args.seed)
     rng.shuffle(txts)
     os.makedirs(args.out, exist_ok=True)
 
     done, thumbs = 0, []
     for t in txts:
-        stem = os.path.splitext(os.path.basename(t))[0]
+        stem = norm_stem(t)
         if stem not in imgs:
             continue
         img = cv2.imread(imgs[stem])

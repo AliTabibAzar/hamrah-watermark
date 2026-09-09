@@ -16,15 +16,25 @@ from torch.utils.data import ConcatDataset, DataLoader, Dataset, random_split
 try:
     import albumentations as A
 
-    _AUG = A.Compose([
+    _AUG_STEPS = [
         A.HorizontalFlip(p=0.5),
         A.ShiftScaleRotate(shift_limit=0.05, scale_limit=0.15,
                            rotate_limit=15, border_mode=0, p=0.7),
         A.RandomBrightnessContrast(brightness_limit=0.2,
                                    contrast_limit=0.2, p=0.5),
-        A.GaussNoise(std_range=(5.0, 20.0), p=0.3),
         A.ImageCompression(quality_range=(60, 100), p=0.3),
-    ])
+    ]
+    # GaussNoise changed its std_range semantics across albumentations
+    # versions (pixel units vs 0-1). Try new-style first, then old-style,
+    # then skip noise entirely — a missing noise step must never kill a run.
+    for _noise_kwargs in ({"std_range": (0.05, 0.2)},
+                          {"var_limit": (25.0, 400.0)}):
+        try:
+            _AUG_STEPS.append(A.GaussNoise(p=0.3, **_noise_kwargs))
+            break
+        except Exception:
+            continue
+    _AUG = A.Compose(_AUG_STEPS)
 except ImportError:
     _AUG = None  # graceful fallback to plain hflip below
 

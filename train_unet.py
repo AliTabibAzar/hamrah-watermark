@@ -49,7 +49,7 @@ def train(args):
     scaler = torch.amp.GradScaler("cuda") if device == "cuda" else None
     os.makedirs(args.out, exist_ok=True)
 
-    start_epoch, best_iou, bad = 1, 0.0, 0
+    start_epoch, best_iou, bad = args.start_epoch, 0.0, 0
     best_path = os.path.join(args.out, "watermark-unet.pt")
     if args.resume and os.path.exists(best_path):
         try:
@@ -120,5 +120,7 @@ if __name__ == "__main__":
     ap.add_argument("--no-pretrained", action="store_true")
     ap.add_argument("--resume", action="store_true",
                     help="continue from --out/watermark-unet.pt if present")
+    ap.add_argument("--start-epoch", type=int, default=1,
+                    help="epoch to start from (useful with --resume to skip already-trained epochs)")
     ap.add_argument("--scheduler", default="plateau", choices=["plateau", "cosine"])
     train(ap.parse_args())
